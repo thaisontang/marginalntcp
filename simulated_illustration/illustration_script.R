@@ -25,29 +25,6 @@ form <- function(covariates, outcome = NULL, quotes = T) {
   equation
 }
 
-# Monotone Regression Function
-monofunc <- function(covs,
-                     spec.use = spec.short,         # Choice of Number of Iterations/Burn-In
-                     parm.use = parm.nomono         # Choice of Model Parametrization
-) {
-  (begin <- Sys.time())
-  results <- monosurv(niter=spec.use$niter, burnin=spec.use$burnin, adapt=spec.use$adapt,
-                      refresh = 10, thin = 5,
-                      rhoa=0.1, rhob=0.1, deltai=0.5, drange=10.0,
-                      predict = c(rep(1, covs$nobs), rep(1, nrow(covs$test))),   # Predict on Both Training and Test Sets
-                      include = c(rep(1, covs$nobs), rep(0, nrow(covs$test))),
-                      casestatus = c(covs$y, rep(0, nrow(covs$test))),
-                      axes = rbind(covs$train, covs$test)[,covs$add.id],
-                      covariates = rbind(covs$train, covs$test)[,covs$covs.id],
-                      birthdeath = parm.use$birthdeath,
-                      settozero = parm.use$settozero,
-                      package = parm.use$package
-  )
-  (tdiff <- Sys.time() - begin)
-  results$time <- tdiff
-  return(results)
-}
-
 # BASE PACKAGES
 installer(c("tidyverse", "here", "monoreg"))
 
@@ -66,6 +43,11 @@ gvals <- seq(0, 1, by = 0.02)   # 51 (volume indices)
 num.d <- length(dvals) # Number of Dose Indices
 num.g <- length(gvals) # Number of Volume Indices
 
+# Visualization/Test Set Purposes
+grid.num.d <- 24
+grid.num.g <- 24
+dvals.grid <- seq(dose.range[1], dose.range[2], length.out = grid.num.d + 2)[-c(1, grid.num.d + 2)]
+gvals.grid <- seq(0, 1, length.out = grid.num.g + 2)[-c(1, grid.num.g + 2)]
 
 # Stochastic Intervention for Bladder DVHs
 # Volume at 40 Gy <= 30%
@@ -81,12 +63,20 @@ d.star_skin <- 20; d.star_skin <- dvals[findInterval(d.star_skin, dvals)]
 d.star.data_skin <- long.data[which(long.data$Dose == d.star_skin),]
 
 
-# FIGURE 1: VISUALIZATION OF DVHs
-# source(here("figures", "Figure 1", "figure1_code.R"))
+# FIGURE 1 (SUPPLEMENTARY FIGURE 9 analogue): VISUALIZATION OF DVHs
+source(here("simulated_illustration", "figures", "Figure 1", "figure1_code.R"))
 
+# MARGINAL MODELING (based on observed data [1 sample])
+source(here("simulated_illustration", "illustration_modeling_bladder.R"))
+source(here("simulated_illustration", "illustration_modeling_skin.R"))
 
+# BOOTSTRAP (1000 resamples)
+source(here("simulated_illustration", "illustration_bootstrap_bladder.R"))   # Bootstrap Script (Bladder)
+source(here("simulated_illustration", "illustration_bootstrap_skin.R"))      # Bootstrap Script (Skin)
 
-# BOOTSTRAP
+# BOOSTRAP VISUALIZATIONS
+source(here("simulated_illustration", "illustration_bootstrap_visualization_bladder.R"))   # Bladder (Figure 2, Table 1)
+source(here("simulated_illustration", "illustration_bootstrap_visualization_bladder.R"))   # Bladder (Figure 3, Table 1)
 
 
 

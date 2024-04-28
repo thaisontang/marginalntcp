@@ -66,8 +66,8 @@ for(id in wide.data$ID) {
   sub.data <- long.data[which(long.data$ID == id),]
   lines(sub.data$Dose, sub.data$Volume_Bladder, col = ggplot2::alpha(color_labs, alph)[pull(wide.data[id,strat.var]) + 1])
 }
-lines(dvals, colMeans(blad.dvh[which(wide.data$Age65_numeric == 1),]), lwd = 3, col = "orange")
-lines(dvals, colMeans(blad.dvh[which(wide.data$Age65_numeric == 0),]), lwd = 3, col = "blue")
+lines(dvals, colMeans(blad.dvh[which(wide.data$`GU Toxicity` == 1),]), lwd = 3, col = "orange")
+lines(dvals, colMeans(blad.dvh[which(wide.data$`GU Toxicity` == 0),]), lwd = 3, col = "blue")
 legend("topright", col = color_labs, name_labs, lty = rep(1, 2), lwd = rep(2, 2))
 par(op)
 dev.off()
@@ -86,8 +86,8 @@ for(id in wide.data$ID) {
   sub.data <- long.data[which(long.data$ID == id),]
   lines(sub.data$Dose, sub.data$Volume_Skin, col = ggplot2::alpha(color_labs, alph)[pull(wide.data[id,strat.var]) + 1])
 }
-lines(dvals, colMeans(skin.dvh[which(wide.data$Age65_numeric == 1),]), lwd = 3, col = "orange")
-lines(dvals, colMeans(skin.dvh[which(wide.data$Age65_numeric == 0),]), lwd = 3, col = "blue")
+lines(dvals, colMeans(skin.dvh[which(wide.data$`GI Toxicity` == 1),]), lwd = 3, col = "orange")
+lines(dvals, colMeans(skin.dvh[which(wide.data$`GI Toxicity` == 0),]), lwd = 3, col = "blue")
 legend("topright", col = color_labs, name_labs, lty = rep(1, 2), lwd = rep(2, 2))
 par(op)
 dev.off()
