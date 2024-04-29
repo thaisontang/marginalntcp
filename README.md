@@ -7,3 +7,9 @@ We recommend running the R scripts using `marginalntcp_code.Rproj` in RStudio to
 The repository consists of:
 * Source code for the simulation studies (`simulation` folder)
 * Source code for an illustration of the proposed methods on a simulated dataset (`simulated_illustration` folder)
+
+The `simulation` folder consists of:
+- Source code for the simulation study described in the manuscript's main text (`main simulation` folder)
+- Source code for the supplementary simulation studies (`supplementary simulation` folder)
+- Essential functions required to run all simulation studies (`functions` folder)
+- A `data` folder to store estimates from the simulation replicates.
