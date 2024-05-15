@@ -1,4 +1,5 @@
 # MARGINAL MODEL for Observed Dataset
+res.dir <- here("simulated_illustration", "figures")
 
 # BLADDER DVHs & GU TOXICITY
 # Estimated Run Time: 20 minutes
@@ -292,7 +293,7 @@ rm(sim.mod4); rm(model); gc()
 
 # Empty Vectors to Collect Estimates
 fit.risk.unadj <- fit.risk <- array(NA, dim = c(num.d, num.g, mod.size))
-fit.srisk.unadj <- fit.srisk <- lapply(1:mod.size, function(x) { NA })
+fit.srisk.unadj <- fit.srisk <- lapply(1:mod.size, function(x) { c(NA, NA) })
 
 # P(X = x)
 emp.dist <- long.data[,cov.labs] %>% group_by_all() %>% summarize(prop = n()/nrow(long.data))
@@ -339,7 +340,11 @@ for(z in 1:mod.size) {
   est.stochast.0 <- sum(est.risks.0*est.isws.0)
   est.stochast.1 <- sum(est.risks.1*est.isws.1)
   
-  fit.srisk[[z]] <- mean(c(est.stochast.0, est.stochast.1)[d.star.data_bladder[,cov.labs] %>% pull + 1])
+  # NTCP under Stochastic Intervention
+  fit.srisk[[z]][1] <- mean(c(est.stochast.0, est.stochast.1)[d.star.data_bladder[,cov.labs] %>% pull + 1])
+  
+  # NTCP under Observed Intervention
+  fit.srisk[[z]][2] <- mean(cond.means$risk)
 }
 
 
@@ -373,40 +378,85 @@ for(z in 1:mod.size) {
   # Estimate
   est.stochast <- sum(est.risks*est.isws)
   
-  fit.srisk.unadj[[z]] <- est.stochast
+  # NTCP under Stochastic Intervention
+  fit.srisk.unadj[[z]][1] <- est.stochast
+  
+  # NTCP under Observed Intervention
+  fit.srisk.unadj[[z]][2] <- mean(cond.means$risk)
 }
-
-# Empirical Mean
-obs.risk <- prop.table(table(wide.data$`GU Toxicity`))[2]
-
 
 
 
 # POINTWISE CAUSAL NTCPs (Contour Plots of Point Estimates)
 
+
+# Restrict Contour Region (based on Observed Data)
+signif.floor <- function(x, n){
+  pow <- floor( log10( abs(x) ) ) + 1 - n
+  y <- floor(x / 10 ^ pow) * 10^pow
+  # handle the x = 0 case
+  y[x==0] <- 0
+  y
+}
+signif.ceiling <- function(x, n){
+  pow <- floor( log10( abs(x) ) ) + 1 - n
+  y <- ceiling(x / 10 ^ pow) * 10^pow
+  # handle the x = 0 case
+  y[x==0] <- 0
+  y
+}
+
+dvh.bound <- long.data %>% group_by(Dose) %>%
+  summarise(`minVol` = signif.floor(min(Volume_Bladder), 2),
+            `maxVol` = signif.ceiling(max(Volume_Bladder), 2)) %>%
+  mutate(dose.idx = 1:num.d,
+         minVol.idx = findInterval(minVol, gvals),
+         maxVol.idx = ifelse(findInterval(maxVol, gvals) != 51, findInterval(maxVol, gvals) + 1, findInterval(maxVol, gvals))) %>%
+  ungroup %>% dplyr::select(dose.idx:maxVol.idx) %>%
+  rowwise %>% transmute(dose.idx, Vol.idx = list(seq(minVol.idx, maxVol.idx, 1))) %>%
+  unnest(Vol.idx) %>% data.matrix
+
+poly.seq <- long.data %>% group_by(Dose) %>%
+  summarise(`minVol` = signif.floor(min(Volume_Bladder), 2),
+            `maxVol` = signif.ceiling(max(Volume_Bladder), 2) + 0.02)
+poly.seq <- rbind(cbind(poly.seq$Dose, poly.seq$minVol),
+                  cbind(rev(poly.seq$Dose), rev(poly.seq$maxVol)))
+
+bound.mat <- function(mat) {
+  nullmat <- matrix(NA, nrow(mat), ncol(mat))
+  nullmat[dvh.bound] <- mat[dvh.bound]
+  return(nullmat)
+}
+
 # Covariate-Unadjusted Models - Linear, Polynomial, Additive, Bivariable
+pdf(here(res.dir, "PointwiseNTCP_Unadjusted_Bladder.pdf"), width = 8, height =5)
 op <- par(las = 1, mfrow = c(2, 2), mar = c(4.5, 5, 1.0, 1.0), oma = c(0, 0, 0, 0), mgp = c(3, 1, 0))
 for(z in 1:length(param.names)) {
-  contour(x = dvals, y = gvals, z = fit.risk.unadj[,,z], nlevels = 10, col = "black",
+  contour(x = dvals, y = gvals, z = bound.mat(fit.risk.unadj[,,z]), nlevels = 10, col = "black",
           xlim = range(dvals), lwd = 1.5, xlab = "Dose (Gy)", ylab = "Volume")
   abline(h = c(0, 1), v = range(dvals), col = "gray")
+  lines(poly.seq, lty = "dashed")
 }
 par(op)
+dev.off()
 
 # Covariate-Adjusted Models - Linear, Polynomial, Additive, Bivariable
+pdf(here(res.dir, "PointwiseNTCP_Adjusted_Bladder.pdf"), width = 8, height =5)
 op <- par(las = 1, mfrow = c(2, 2), mar = c(4.5, 5, 1.0, 1.0), oma = c(0, 0, 0, 0), mgp = c(3, 1, 0))
 for(z in 1:length(param.names)) {
-  contour(x = dvals, y = gvals, z = fit.risk[,,z], nlevels = 10, col = "black",
+  contour(x = dvals, y = gvals, z = bound.mat(fit.risk[,,z]), nlevels = 10, col = "black",
           xlim = range(dvals), lwd = 1.5, xlab = "Dose (Gy)", ylab = "Volume")
   abline(h = c(0, 1), v = range(dvals), col = "gray")
+  lines(poly.seq, lty = "dashed")
 }
 par(op)
+dev.off()
 
 # STOCHASTIC CAUSAL RISK RATIO (Stochastic Intervention)
 
 # COVARIATE-UNADJUSTED MODEL
 # Point Estimate (no CI reported)
-scrr.unadj <- unlist(fit.srisk.unadj)/obs.risk
+scrr.unadj <- unlist(lapply(fit.srisk.unadj, function(x) x[1]/x[2]))
 names(scrr.unadj) <- param.names; scrr.unadj
 
 # In-Sample Metrics
@@ -417,7 +467,7 @@ colnames(insample.metrics.unadj) <- param.names; round(insample.metrics.unadj, 4
 
 # COVARIATE-ADJUSTED MODEL
 # Point Estimate (no CI reported)
-scrr <- unlist(fit.srisk)/obs.risk
+scrr <- unlist(lapply(fit.srisk, function(x) x[1]/x[2]))
 names(scrr) <- param.names; scrr
 
 # In-Sample Metrics

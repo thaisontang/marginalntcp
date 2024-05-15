@@ -292,7 +292,7 @@ rm(sim.mod4); rm(model); gc()
 
 # Empty Vectors to Collect Estimates
 fit.risk.unadj <- fit.risk <- array(NA, dim = c(num.d, num.g, mod.size))
-fit.srisk.unadj <- fit.srisk <- lapply(1:mod.size, function(x) { NA })
+fit.srisk.unadj <- fit.srisk <- lapply(1:mod.size, function(x) { c(NA, NA) })
 
 # P(X = x)
 emp.dist <- long.data[,cov.labs] %>% group_by_all() %>% summarize(prop = n()/nrow(long.data))
@@ -339,7 +339,13 @@ for(z in 1:mod.size) {
   est.stochast.0 <- sum(est.risks.0*est.isws.0)
   est.stochast.1 <- sum(est.risks.1*est.isws.1)
   
-  fit.srisk[[z]] <- mean(c(est.stochast.0, est.stochast.1)[d.star.data_skin[,cov.labs] %>% pull + 1])
+  
+  # NTCP under Stochastic Intervention
+  fit.srisk[[z]][1] <- mean(c(est.stochast.0, est.stochast.1)[d.star.data_skin[,cov.labs] %>% pull + 1])
+  
+  # NTCP under Observed Intervention
+  fit.srisk[[z]][2] <- mean(cond.means$risk)
+  
 }
 
 
@@ -373,11 +379,12 @@ for(z in 1:mod.size) {
   # Estimate
   est.stochast <- sum(est.risks*est.isws)
   
-  fit.srisk.unadj[[z]] <- est.stochast
+  # NTCP under Stochastic Intervention
+  fit.srisk.unadj[[z]][1] <- est.stochast
+  
+  # NTCP under Observed Intervention
+  fit.srisk.unadj[[z]][2] <- mean(cond.means$risk)
 }
-
-# Empirical Mean
-obs.risk <- prop.table(table(wide.data$`GI Toxicity`))[2]
 
 
 
@@ -406,7 +413,7 @@ par(op)
 
 # COVARIATE-UNADJUSTED MODEL
 # Point Estimate (no CI reported)
-scrr.unadj <- unlist(fit.srisk.unadj)/obs.risk
+scrr.unadj <- unlist(lapply(fit.srisk.unadj, function(x) x[1]/x[2]))
 names(scrr.unadj) <- param.names; scrr.unadj
 
 # In-Sample Metrics
@@ -417,7 +424,7 @@ colnames(insample.metrics.unadj) <- param.names; round(insample.metrics.unadj, 4
 
 # COVARIATE-ADJUSTED MODEL
 # Point Estimate (no CI reported)
-scrr <- unlist(fit.srisk)/obs.risk
+scrr <- unlist(lapply(fit.srisk, function(x) x[1]/x[2]))
 names(scrr) <- param.names; scrr
 
 # In-Sample Metrics

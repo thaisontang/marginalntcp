@@ -82,10 +82,7 @@ meanfunc.boot <- function(num.cores = 8, seeding = 1) {
     params.output <- array(NA, dim = c(num.d, num.g, length(param.names), R))
     
     # Bootstrap Stochastic Causal NTCP Estimates
-    params2.output <- matrix(NA, nrow = R, ncol = length(param.names))
-    
-    # Bootstrap Empirical Means of the Outcome
-    params3.output <- matrix(NA, nrow = R, ncol = 1)
+    params2.output <- params3.output <- matrix(NA, nrow = R, ncol = length(param.names))
     
     # Bootstrap In-Sample Fit Statistics
     deviance.output <- matrix(NA, nrow = R, ncol = length(param.names))
@@ -292,7 +289,7 @@ meanfunc.boot <- function(num.cores = 8, seeding = 1) {
   
       # Empty Vectors to Collect Estimates
       fit.risk <- array(NA, dim = c(num.d, num.g, mod.size))
-      fit.srisk <- lapply(1:mod.size, function(x) { NA })
+      fit.srisk <- lapply(1:mod.size, function(x) { c(NA, NA) })
       
       # P(X = x)
       emp.dist <- boot.long[,cov.labs] %>% group_by_all() %>% summarize(prop = n()/nrow(boot.long))
@@ -340,20 +337,23 @@ meanfunc.boot <- function(num.cores = 8, seeding = 1) {
         est.stochast.0 <- sum(est.risks.0*est.isws.0)
         est.stochast.1 <- sum(est.risks.1*est.isws.1)
         
-        fit.srisk[[z]] <- mean(c(est.stochast.0, est.stochast.1)[boot.d.star.data_bladder[,cov.labs] %>% pull + 1])
+        # NTCP under Stochastic Intervention
+        fit.srisk[[z]][1] <- mean(c(est.stochast.0, est.stochast.1)[d.star.data_bladder[,cov.labs] %>% pull + 1])
+        
+        # NTCP under Observed Intervention
+        fit.srisk[[z]][2] <- mean(cond.means$risk)
       }
-      obs.risk <- prop.table(table(boot.wide$`GU Toxicity`))[2]
       
       
       # Pointwise Causal NTCP Estimates
       params.output[,,,r] <- array(fit.risk, dim = c(num.d, num.g, length(param.names), 1))
       
-      # Stochastic Causal NTCP Estimates
+      # NTCP Estimates under Stochastic Intervention
       nan.recode <- function(x) {na_if(x, "NaN")}
-      params2.output[r,] <- nan.recode(unlist(fit.srisk))
+      params2.output[r,] <- nan.recode(unlist(lapply(fit.srisk, function(x) x[1])))
       
-      # Empirical Mean Estimates
-      params3.output[r,] <- nan.recode(unname(obs.risk))
+      # NTCP Estimates under Observed Intervention
+      params3.output[r,] <- nan.recode(unlist(lapply(fit.srisk, function(x) x[2])))
       
       # In-Sample Statistics
       eff.parms.output[r,] <- nan.recode(eff.parms)
@@ -436,4 +436,4 @@ if(!file.exists(outpath2)) dir.create(file.path(extension, "storage"))
 # bootresamp <- meanfunc.boot(num.cores = 8, seeding = 1)
 # (bootresamp$time <- Sys.time() - sim.begin)    # Total Bootstrap Resampling Time
 # save(bootresamp, file = file.path(outpath2, paste0("ntcp_bootresamp_age65_bladder.RData")))
-# load(file = file.path(outpath2, paste0("ntcp_bootresamp_age65_bladder.RData")))
+load(file = file.path(outpath2, paste0("ntcp_bootresamp_age65_bladder.RData")))

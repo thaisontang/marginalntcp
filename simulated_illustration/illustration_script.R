@@ -50,9 +50,9 @@ dvals.grid <- seq(dose.range[1], dose.range[2], length.out = grid.num.d + 2)[-c(
 gvals.grid <- seq(0, 1, length.out = grid.num.g + 2)[-c(1, grid.num.g + 2)]
 
 # Stochastic Intervention for Bladder DVHs
-# Volume at 40 Gy <= 30%
-q_bladder <- 0.3
-d.star_bladder <- 40; d.star_bladder <- dvals[findInterval(d.star_bladder, dvals)]
+# Volume at 42 Gy <= 50%
+q_bladder <- 0.5
+d.star_bladder <- 42; d.star_bladder <- dvals[findInterval(d.star_bladder, dvals)]
 d.star.data_bladder <- long.data[which(long.data$Dose == d.star_bladder),]
 
 
